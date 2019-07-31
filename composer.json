@@ -1,0 +1,17 @@
+{
+    "name": "bertshang\/backup",
+    "description": "backup tool",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "bertshang",
+            "email": "359352960@qq.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Bertshang\\Backup\\": "src"
+        }
+    }
+}
