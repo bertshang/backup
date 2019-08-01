@@ -36,11 +36,11 @@ class BackupJob
     /** @var bool */
     protected $sendNotifications = true;
 
-    public function __construct()
+    public function __construct($db)
     {
         $this->dontBackupFilesystem();
         $this->dontBackupDatabases();
-        $this->setDefaultFilename();
+        $this->setDefaultFilename($db);
 
         $this->backupDestinations = new Collection();
     }
@@ -76,9 +76,9 @@ class BackupJob
         return $this;
     }
 
-    public function setDefaultFilename(): self
+    public function setDefaultFilename($db): self
     {
-        $this->filename = Carbon::now()->format('Y-m-d-H-i-s').'.zip';
+        $this->filename = Carbon::now()->format('Y-m-d-H-i-s').'-'."{$db}".'.zip';
 
         return $this;
     }

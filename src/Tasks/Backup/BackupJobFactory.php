@@ -7,9 +7,9 @@ use Bertshang\Backup\BackupDestination\BackupDestinationFactory;
 
 class BackupJobFactory
 {
-    public static function createFromArray(array $config): BackupJob
+    public static function createFromArray(array $config, $db): BackupJob
     {
-        return (new BackupJob())
+        return (new BackupJob($db))
             ->setFileSelection(static::createFileSelection($config['backup']['source']['files']))
             ->setDbDumpers(static::createDbDumpers($config['backup']['source']['databases']))
             ->setBackupDestinations(BackupDestinationFactory::createFromArray($config['backup']));

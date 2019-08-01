@@ -24,8 +24,8 @@ class BackupCommand extends BaseCommand
 
         try {
             $this->guardAgainstInvalidOptions();
-
-            $backupJob = BackupJobFactory::createFromArray(config('backup'));
+            $db = $this->argument('dbname');
+            $backupJob = BackupJobFactory::createFromArray(config('backup'), $db);
 
             if ($this->option('only-db')) {
                 $backupJob->dontBackupFilesystem();
@@ -50,7 +50,7 @@ class BackupCommand extends BaseCommand
                 $backupJob->disableNotifications();
             }
 
-            $db = $this->argument('dbname');
+
 
             $backupJob->run($db);
 
