@@ -224,8 +224,7 @@ class BackupJob
 
         return $this->dbDumpers->map(function (DbDumper $dbDumper) use ($db) {
 
-            foreach ($db as $v) {
-                $dbDumper->setDbName($v);
+                $dbDumper->setDbName($db);
                 app(ConsoleOutput::class)->info("Dumping database {$dbDumper->getDbName()}...");
 
                 $dbType = mb_strtolower(basename(str_replace('\\', '/', get_class($dbDumper))));
@@ -247,10 +246,8 @@ class BackupJob
                 $temporaryFilePath = $this->temporaryDirectory->path('db-dumps'.DIRECTORY_SEPARATOR.$fileName);
 
                 $dbDumper->dumpToFile($temporaryFilePath);
-            }
 
-
-            return $temporaryFilePath;
+                return $temporaryFilePath;
         })->toArray();
     }
 

@@ -11,7 +11,7 @@ class BackupCommand extends BaseCommand
 {
 
     /** @var string */
-    protected $signature = "backup:run {dbname*} {--filename=} {--only-db} {--db-name=*} {--only-files} {--only-to-disk=} {--disable-notifications}";
+    protected $signature = "backup:run {dbname} {--filename=} {--only-db} {--db-name=*} {--only-files} {--only-to-disk=} {--disable-notifications}";
 
     /** @var string */
     protected $description = '运行备份命令.';
