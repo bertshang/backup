@@ -46,13 +46,6 @@ abstract class DbDumper
     /** @var object */
     protected $compressor = null;
 
-    public function __construct()
-    {
-        $this->host = config('backup.databases.host');
-        $this->dbName = $this->getDb();
-        $this->userName = config('backup.databases.username');
-        $this->password = config('backup.databases.password');
-    }
 
     //返回当前的数据库
     protected function getDb() {
@@ -258,6 +251,7 @@ abstract class DbDumper
 
     protected function checkIfDumpWasSuccessFul(Process $process, string $outputFile)
     {
+        
         if (! $process->isSuccessful()) {
             throw DumpFailed::processDidNotEndSuccessfully($process);
         }

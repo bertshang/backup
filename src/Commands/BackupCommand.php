@@ -6,18 +6,19 @@ use Exception;
 use Bertshang\Backup\Events\BackupHasFailed;
 use Bertshang\Backup\Exceptions\InvalidCommand;
 use Bertshang\Backup\Tasks\Backup\BackupJobFactory;
-
+use Bertshang\Backup\Helpers\ConsoleOutput;
 class BackupCommand extends BaseCommand
 {
+
     /** @var string */
-    protected $signature = 'backup:run {--filename=} {--only-db} {--db-name=*} {--only-files} {--only-to-disk=} {--disable-notifications}';
+    protected $signature = "backup:run {dbname*} {--filename=} {--only-db} {--db-name=*} {--only-files} {--only-to-disk=} {--disable-notifications}";
 
     /** @var string */
     protected $description = '运行备份命令.';
 
     public function handle()
     {
-        consoleOutput()->comment('Starting backup...');
+        app(ConsoleOutput::class)->comment('Starting backup...');
 
         $disableNotifications = $this->option('disable-notifications');
 
@@ -49,11 +50,13 @@ class BackupCommand extends BaseCommand
                 $backupJob->disableNotifications();
             }
 
-            $backupJob->run();
+            $db = $this->argument('dbname');
 
-            consoleOutput()->comment('Backup completed!');
+            $backupJob->run($db);
+
+            app(ConsoleOutput::class)->comment('Backup completed!');
         } catch (Exception $exception) {
-            consoleOutput()->error("Backup failed because: {$exception->getMessage()}.");
+            app(ConsoleOutput::class)->error("Backup failed because: {$exception->getMessage()}.");
 
             if (! $disableNotifications) {
                 event(new BackupHasFailed($exception));

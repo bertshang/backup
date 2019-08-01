@@ -132,13 +132,14 @@ class MySql extends DbDumper
         $this->guardAgainstIncompleteCredentials();
 
         $tempFileHandle = tmpfile();
-        fwrite($tempFileHandle, $this->getContentsOfCredentialsFile());
+        $a = fwrite($tempFileHandle, $this->getContentsOfCredentialsFile());
+        
         $temporaryCredentialsFile = stream_get_meta_data($tempFileHandle)['uri'];
 
         $command = $this->getDumpCommand($dumpFile, $temporaryCredentialsFile);
-        dd($command);
+        
         $process = new Process($command);
-
+        
         if (! is_null($this->timeout)) {
             $process->setTimeout($this->timeout);
         }
@@ -244,6 +245,7 @@ class MySql extends DbDumper
             "password = '{$this->password}'",
             "host = '{$this->host}'",
             "port = '{$this->port}'",
+            //"db_name = '{$db}'",
         ];
 
         return implode(PHP_EOL, $contents);

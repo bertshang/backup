@@ -58,10 +58,7 @@ return [
              */
 
             'databases' => [
-                'mysql',
-                'host' => '192.168.0.141',
-                'username' => 'root',
-                'password' => 'root',
+                'tenant',
             ],
         ],
 

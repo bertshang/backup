@@ -15,7 +15,7 @@ use Bertshang\Backup\DbDumper\Compressors\GzipCompressor;
 use Bertshang\Backup\TemporaryDirectory\TemporaryDirectory;
 use Bertshang\Backup\Events\BackupManifestWasCreated;
 use Bertshang\Backup\BackupDestination\BackupDestination;
-
+use Bertshang\Backup\Helpers\ConsoleOutput;
 class BackupJob
 {
     /** @var \Bertshang\Backup\Tasks\Backup\FileSelection */
@@ -124,7 +124,7 @@ class BackupJob
         return $this;
     }
 
-    public function run()
+    public function run($db)
     {
         $temporaryDirectoryPath = config('backup.backup.temporary_directory') ?? storage_path('app/backup-temp');
 
@@ -139,7 +139,7 @@ class BackupJob
                 throw InvalidBackupJob::noDestinationsSpecified();
             }
 
-            $manifest = $this->createBackupManifest();
+            $manifest = $this->createBackupManifest($db);
 
             if (! $manifest->count()) {
                 throw InvalidBackupJob::noFilesToBeBackedUp();
@@ -149,7 +149,7 @@ class BackupJob
 
             $this->copyToBackupDestinations($zipFile);
         } catch (Exception $exception) {
-            consoleOutput()->error("Backup failed because {$exception->getMessage()}.".PHP_EOL.$exception->getTraceAsString());
+            app(ConsoleOutput::class)->error("Backup failed because {$exception->getMessage()}.".PHP_EOL.$exception->getTraceAsString());
 
             $this->sendNotification(new BackupHasFailed($exception));
 
@@ -161,11 +161,11 @@ class BackupJob
         $this->temporaryDirectory->delete();
     }
 
-    protected function createBackupManifest(): Manifest
+    protected function createBackupManifest($db): Manifest
     {
-        $databaseDumps = $this->dumpDatabases();
+        $databaseDumps = $this->dumpDatabases($db);
 
-        consoleOutput()->info('Determining files to backup...');
+        app(ConsoleOutput::class)->info('Determining files to backup...');
 
         $manifest = Manifest::create($this->temporaryDirectory->path('manifest.txt'))
             ->addFiles($databaseDumps)
@@ -201,13 +201,12 @@ class BackupJob
 
     protected function createZipContainingEveryFileInManifest(Manifest $manifest)
     {
-        consoleOutput()->info("Zipping {$manifest->count()} files...");
+        app(ConsoleOutput::class)->info("Zipping {$manifest->count()} files...");
 
         $pathToZip = $this->temporaryDirectory->path(config('backup.backup.destination.filename_prefix').$this->filename);
-
         $zip = Zip::createForManifest($manifest, $pathToZip);
 
-        consoleOutput()->info("Created zip containing {$zip->count()} files. Size is {$zip->humanReadableSize()}");
+        app(ConsoleOutput::class)->info("Created zip containing {$zip->count()} files. Size is {$zip->humanReadableSize()}");
 
         $this->sendNotification(new BackupZipWasCreated($pathToZip));
 
@@ -220,30 +219,36 @@ class BackupJob
      *
      * @return array
      */
-    protected function dumpDatabases(): array
+    protected function dumpDatabases($db): array
     {
-        return $this->dbDumpers->map(function (DbDumper $dbDumper) {
-            consoleOutput()->info("Dumping database {$dbDumper->getDbName()}...");
 
-            $dbType = mb_strtolower(basename(str_replace('\\', '/', get_class($dbDumper))));
+        return $this->dbDumpers->map(function (DbDumper $dbDumper) use ($db) {
 
-            $dbName = $dbDumper instanceof Sqlite ? 'database' : $dbDumper->getDbName();
+            foreach ($db as $v) {
+                $dbDumper->setDbName($v);
+                app(ConsoleOutput::class)->info("Dumping database {$dbDumper->getDbName()}...");
 
-            $fileName = "{$dbType}-{$dbName}.sql";
+                $dbType = mb_strtolower(basename(str_replace('\\', '/', get_class($dbDumper))));
 
-            if (config('backup.backup.gzip_database_dump')) {
-                $dbDumper->useCompressor(new GzipCompressor());
-                $fileName .= '.'.$dbDumper->getCompressorExtension();
+                $dbName = $dbDumper instanceof Sqlite ? 'database' : $dbDumper->getDbName();
+
+                $fileName = "{$dbType}-{$dbName}.sql";
+
+                if (config('backup.backup.gzip_database_dump')) {
+                    $dbDumper->useCompressor(new GzipCompressor());
+                    $fileName .= '.'.$dbDumper->getCompressorExtension();
+                }
+
+                if ($compressor = config('backup.backup.database_dump_compressor')) {
+                    $dbDumper->useCompressor(new $compressor());
+                    $fileName .= '.'.$dbDumper->getCompressorExtension();
+                }
+
+                $temporaryFilePath = $this->temporaryDirectory->path('db-dumps'.DIRECTORY_SEPARATOR.$fileName);
+
+                $dbDumper->dumpToFile($temporaryFilePath);
             }
 
-            if ($compressor = config('backup.backup.database_dump_compressor')) {
-                $dbDumper->useCompressor(new $compressor());
-                $fileName .= '.'.$dbDumper->getCompressorExtension();
-            }
-
-            $temporaryFilePath = $this->temporaryDirectory->path('db-dumps'.DIRECTORY_SEPARATOR.$fileName);
-
-            $dbDumper->dumpToFile($temporaryFilePath);
 
             return $temporaryFilePath;
         })->toArray();
@@ -251,17 +256,18 @@ class BackupJob
 
     protected function copyToBackupDestinations(string $path)
     {
+        
         $this->backupDestinations->each(function (BackupDestination $backupDestination) use ($path) {
             try {
-                consoleOutput()->info("Copying zip to disk named {$backupDestination->diskName()}...");
+                app(ConsoleOutput::class)->info("Copying zip to disk named {$backupDestination->diskName()}...");
 
                 $backupDestination->write($path);
 
-                consoleOutput()->info("Successfully copied zip to disk named {$backupDestination->diskName()}.");
+                app(ConsoleOutput::class)->info("Successfully copied zip to disk named {$backupDestination->diskName()}.");
 
                 $this->sendNotification(new BackupWasSuccessful($backupDestination));
             } catch (Exception $exception) {
-                consoleOutput()->error("Copying zip failed because: {$exception->getMessage()}.");
+                app(ConsoleOutput::class)->error("Copying zip failed because: {$exception->getMessage()}.");
 
                 $this->sendNotification(new BackupHasFailed($exception, $backupDestination ?? null));
             }

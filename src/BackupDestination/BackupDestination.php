@@ -79,7 +79,7 @@ class BackupDestination
         }
 
         $destination = $this->backupName.'/'.pathinfo($file, PATHINFO_BASENAME);
-
+        
         $handle = fopen($file, 'r+');
 
         $this->disk->getDriver()->writeStream(
